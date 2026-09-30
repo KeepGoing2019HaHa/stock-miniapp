@@ -1,0 +1,23 @@
+{
+  "description": "知股：原生微信股票 AI 研究小程序",
+  "miniprogramRoot": "./",
+  "compileType": "miniprogram",
+  "appid": "wxa88701e1af24f636",
+  "projectname": "stock-miniapp",
+  "libVersion": "3.7.12",
+  "packOptions": {
+    "ignore": [
+      { "type": "folder", "value": "tests" },
+      { "type": "folder", "value": ".validation" },
+      { "type": "file", "value": "README.md" },
+      { "type": "file", "value": ".gitignore" }
+    ]
+  },
+  "setting": {
+    "urlCheck": true,
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true
+  }
+}

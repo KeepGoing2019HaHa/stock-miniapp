@@ -1,0 +1,11 @@
+# This hostname must also be accepted as a request domain by the WeChat platform.
+trading.japaneast.cloudapp.azure.com {
+	request_body {
+		max_size 8KB
+	}
+	header {
+		X-Content-Type-Options nosniff
+		Strict-Transport-Security "max-age=31536000"
+	}
+	reverse_proxy 127.0.0.1:8000
+}

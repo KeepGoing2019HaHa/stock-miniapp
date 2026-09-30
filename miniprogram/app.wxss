@@ -1,0 +1,11 @@
+page {
+  background: #f5f7fb;
+  color: #17243a;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+  font-size: 28rpx;
+  line-height: 1.6;
+}
+view, text, button, input { box-sizing: border-box; }
+button { font-size: 28rpx; }
+button::after { border: 0; }
+button[disabled] { opacity: .48; }

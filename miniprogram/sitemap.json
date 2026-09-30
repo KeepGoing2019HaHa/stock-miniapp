@@ -1,0 +1,4 @@
+{
+  "desc": "登录后的用户任务不参与微信搜索索引",
+  "rules": [{ "action": "disallow", "page": "*" }]
+}
