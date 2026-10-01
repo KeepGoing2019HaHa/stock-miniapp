@@ -5,6 +5,7 @@ import logging
 import time
 from collections import OrderedDict
 from contextlib import asynccontextmanager
+from typing import Annotated
 from uuid import UUID
 
 import httpx
@@ -14,7 +15,8 @@ from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from . import worker
-from .models import LoginRequest, PredictionRequest
+from .daily import DailyReader
+from .models import DailyQuery, LoginRequest, PredictionRequest
 from .settings import Settings
 from .store import Store
 
@@ -108,6 +110,7 @@ def create_app(settings: Settings | None = None, *, start_worker=True) -> FastAP
     settings = settings or Settings.from_env()
     store = Store(settings)
     limiter = RateLimiter()
+    daily_reader = DailyReader(settings)
 
     @asynccontextmanager
     async def lifespan(app):
@@ -138,6 +141,7 @@ def create_app(settings: Settings | None = None, *, start_worker=True) -> FastAP
     app.state.store = store
     app.state.settings = settings
     app.state.limiter = limiter
+    app.state.daily_reader = daily_reader
     app.add_middleware(BodyLimitMiddleware)
 
     @app.exception_handler(Exception)
@@ -238,6 +242,23 @@ def create_app(settings: Settings | None = None, *, start_worker=True) -> FastAP
     @app.get("/api/predictions/{job_id}")
     def get_prediction(job_id: UUID, identity: str = Depends(user_id)):
         return store.get_job(identity, str(job_id))
+
+    @app.get("/api/daily")
+    def daily_catalog(identity: str = Depends(user_id)):
+        return {"tickers": list(settings.daily_tickers), "scope": "shared_research", "uses_quota": False}
+
+    @app.get("/api/daily/{ticker}")
+    async def daily_research(query: Annotated[DailyQuery, Depends()], identity: str = Depends(user_id)):
+        limiter.check("daily:" + identity, 20)
+        try:
+            data = await daily_reader.read(
+                query.ticker, query.before.isoformat() if query.before else None, query.lesson_before,
+            )
+        except (OSError, TimeoutError, ValueError):
+            logger.exception("Daily research data unavailable")
+            raise HTTPException(503, "每日复盘数据暂不可用，请稍后重试或联系管理员") from None
+        return {**data, "tracked": query.ticker in settings.daily_tickers,
+                "scope": "shared_research", "uses_quota": False}
 
     return app
 

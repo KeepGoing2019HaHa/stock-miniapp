@@ -13,7 +13,7 @@
   <view wx:if="{{!authed}}" class="card login-card">
     <text class="section-kicker">从一份研究开始</text>
     <text class="card-title">使用微信安全登录</text>
-    <text class="muted intro">每个账号每日 3 次研究额度。登录后仅可查看自己的任务和报告，不读取微信昵称、头像或手机号。</text>
+    <text class="muted intro">每个账号每日 3 次手动研究额度，个人任务与报告仅自己可见。“每日复盘”展示共享的定时研究，查看不扣额度。不读取微信昵称、头像或手机号。</text>
     <view class="notice">
       <text class="notice-title">登录与研究提示</text>
       <text>我们使用微信登录标识区分账号，并在服务端保存股票代码、分析日期与任务记录。研究可能调用云端 AI 服务；请勿输入个人敏感信息。</text>

@@ -36,7 +36,6 @@ class PredictionRequest(BaseModel):
         if not STOCK_PATTERN.fullmatch(value):
             raise ValueError("请输入股票代码，如 NVDA、0700.HK、600519.SS 或 000001.SZ")
         return value
-
     @field_validator("analysis_date")
     @classmethod
     def validate_date(cls, value: str) -> str:
@@ -47,3 +46,9 @@ class PredictionRequest(BaseModel):
         if parsed.isoformat() != value or value > analysis_date_max() or parsed.year < 2000:
             raise ValueError("分析日期须在 2000-01-01 与服务器今天之间")
         return value
+
+
+class DailyQuery(BaseModel):
+    ticker: str = Field(min_length=1, max_length=12, pattern=r"^[A-Z][A-Z0-9]{0,9}(?:-[A-Z])?$")
+    before: date | None = None
+    lesson_before: int | None = Field(default=None, ge=1)

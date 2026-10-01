@@ -18,6 +18,8 @@ class Settings:
     queue_limit: int = 20
     prediction_timeout: int = 1800
     session_seconds: int = 7 * 24 * 3600
+    daily_database: Path = Path.home() / ".tradingagents/daily/daily.sqlite3"
+    daily_tickers: tuple[str, ...] = ("NVDA", "MSFT", "AAPL")
 
     @property
     def wechat_configured(self) -> bool:
@@ -37,4 +39,7 @@ class Settings:
             ).absolute(),
             wechat_app_id=os.getenv("WECHAT_APP_ID", "").strip(),
             wechat_app_secret=os.getenv("WECHAT_APP_SECRET", "").strip(),
+            daily_database=Path(
+                os.getenv("TRADINGAGENTS_DAILY_DATABASE", str(defaults.daily_database))
+            ).expanduser().resolve(),
         )

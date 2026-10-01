@@ -2,6 +2,7 @@
 const assert = require('node:assert/strict');
 const { createClient, STORAGE_KEY } = require('../utils/client');
 const model = require('../utils/model');
+const dailyModel = require('../utils/daily');
 const config = { API_BASE_URL: 'https://api.example.test/', REQUEST_TIMEOUT_MS: 20000 };
 const tests = [];
 const test = (name, run) => tests.push({ name, run });
@@ -42,6 +43,8 @@ function fakeWx(initial) {
     },
     request(options) { platform.requests.push(Object.assign({ done: false }, options)); },
     stopPullDownRefresh() {},
+    switches: [],
+    switchTab(options) { platform.switches.push(options.url); },
     next(method, path) {
       const request = platform.requests.find((item) =>
         !item.done && item.method === method && item.url === config.API_BASE_URL.replace(/\/$/, '') + path);
@@ -65,11 +68,15 @@ function fakeWx(initial) {
 let definition;
 global.Page = (value) => { definition = value; };
 require('../pages/index/index');
-function mount(client, platform) {
+const indexDefinition = definition;
+require('../pages/daily/daily');
+const dailyDefinition = definition;
+definition = indexDefinition;
+function mount(client, platform, pageDefinition = definition) {
   global.getApp = () => ({ client });
   global.wx = platform;
-  const page = Object.assign({}, definition, {
-    data: clone(definition.data),
+  const page = Object.assign({}, pageDefinition, {
+    data: clone(pageDefinition.data),
     setData(values) { Object.assign(this.data, values); }
   });
   page.onLoad();
@@ -525,6 +532,205 @@ test('Reports remain literal text and unsupported ratings require review', () =>
   assert.equal(model.reportSections({ reports: { news: untrusted } })[0].body, untrusted);
   assert.equal(model.ratingLabel('REVIEW'), '需人工复核');
   assert.equal(model.ratingLabel('unexpected'), '需人工复核');
+});
+
+function dailyPayload(ticker = 'NVDA', empty = false) {
+  const summary = {
+    predictions: empty ? 0 : 1, scored: empty ? 0 : 1, pending: 0, late: 0, excluded: 0, awaiting_reflection: 0,
+    direction_hit: empty ? null : 0, absolute_error: empty ? null : 2, absolute_percentage_error: empty ? null : 0.02,
+    interval_hit: empty ? null : 1, interval_width: empty ? null : 8, brier: empty ? null : 0.49,
+    naive_absolute_error: empty ? null : 1, signatures: empty ? [] : ['v1']
+  };
+  return {
+    ticker, tracked: ['NVDA', 'MSFT', 'AAPL'].includes(ticker), generated_at: '2026-10-01T07:00:00Z',
+    summary: { all: summary, last_20_sessions: summary, last_60_sessions: summary },
+    history: { next_before: null, items: empty ? [] : [{
+      id: 1, day: '2026-09-30', status: 'reviewed', created_at: '2026-09-30T12:40:00Z',
+      data_as_of: '2026-09-30T12:39:00Z', reference_close: 101, reference_date: '2026-09-29',
+      forecast: { close: 102, low: 98, high: 106, up_probability: 0.7, rationale: '盘前依据', risks: '不确定性' },
+      actual_close: 100, scores: { absolute_error: 2, direction_hit: false, interval_hit: true },
+      reflection: '事实不支持原方向判断。', candidate: null
+    }] },
+    lessons: { next_before: null, items: empty ? [] : [{
+      id: 1, role: 'market', status: 'candidate', condition: '高波动时', advice: '检查预测区间是否过窄',
+      source_day: '2026-09-30', supports: 0, contradicts: 0,
+      available_at: '2026-09-30T21:00:00Z', last_tested: null
+    }] }
+  };
+}
+
+async function openDaily(platform, page, payload) {
+  const flight = page.onShow();
+  platform.respond(platform.next('GET', '/api/daily'), 200, { tickers: ['NVDA', 'MSFT', 'AAPL'] });
+  await tick();
+  platform.respond(platform.next('GET', '/api/daily/NVDA'), 200, payload || dailyPayload());
+  await flight;
+}
+
+test('Daily tab requires real login and uses switchTab without creating a task', () => {
+  const platform = fakeWx();
+  const page = mount(createClient(platform, config), platform, dailyDefinition);
+  page.onShow();
+  assert.equal(platform.requests.length, 0);
+  page.onGoLogin();
+  assert.deepEqual(platform.switches, ['/pages/index/index']);
+  page.onUnload();
+});
+
+test('Daily metrics distinguish zero hits from absent samples and remain literal text', () => {
+  const data = dailyModel.validateDashboard(dailyPayload(), 'NVDA');
+  assert.equal(dailyModel.metrics(data.summary, 'all').metrics[0].value, '0.0%');
+  const empty = dailyPayload('NVDA', true);
+  assert.equal(dailyModel.metrics(empty.summary, 'all').metrics[0].value, '—');
+  data.history.items[0].reflection = '<script>not executable</script>';
+  assert.equal(dailyModel.displayHistory(data.history.items)[0].reflection, '<script>not executable</script>');
+  assert.equal(dailyModel.displayLessons(data.lessons.items)[0].statusLabel, '待验证');
+  data.summary.all.direction_hit = NaN;
+  assert.throws(() => dailyModel.validateDashboard(data, 'NVDA'), /响应不完整/);
+});
+
+test('Daily tab reads metrics and lessons, switches windows locally, and never POSTs', async () => {
+  const platform = fakeWx(savedSession());
+  const page = mount(createClient(platform, config), platform, dailyDefinition);
+  await openDaily(platform, page);
+  assert.equal(page.data.counts.scored, 1);
+  assert.equal(page.data.history[0].actual, '$100.00');
+  assert.equal(page.data.history[0].directionResult, '方向未命中');
+  assert.equal(page.data.lessons[0].advice, '检查预测区间是否过窄');
+  const count = platform.requests.length;
+  page.onWindow({ currentTarget: { dataset: { key: 'last_20_sessions' } } });
+  assert.equal(page.data.window, 'last_20_sessions');
+  assert.equal(platform.requests.length, count);
+  page.onToggleDay({ currentTarget: { dataset: { id: 1 } } });
+  assert.equal(page.data.history[0].open, true);
+  assert.ok(platform.requests.every((item) => item.method === 'GET'));
+  page.onUnload();
+});
+
+test('Changing stocks cannot show an older request response under the new ticker', async () => {
+  const platform = fakeWx(savedSession());
+  const page = mount(createClient(platform, config), platform, dailyDefinition);
+  await openDaily(platform, page);
+  const msft = page.selectTicker('MSFT');
+  const aapl = page.selectTicker('AAPL');
+  platform.respond(platform.next('GET', '/api/daily/AAPL'), 200, dailyPayload('AAPL', true));
+  await aapl;
+  platform.respond(platform.next('GET', '/api/daily/MSFT'), 200, dailyPayload('MSFT'));
+  await msft;
+  assert.equal(page.data.ticker, 'AAPL');
+  assert.equal(page.data.counts.scored, 0);
+  assert.deepEqual(page.data.history, []);
+  page.onUnload();
+});
+
+test('Daily pagination replaces content, commits cursors only on success, and stays under 1 MiB', async () => {
+  const platform = fakeWx(savedSession());
+  const page = mount(createClient(platform, config), platform, dailyDefinition);
+  const first = dailyPayload();
+  first.history.next_before = '2026-09-30';
+  first.lessons.next_before = 1;
+  await openDaily(platform, page, first);
+  const failure = page.onHistoryNext();
+  platform.fail(platform.next('GET', '/api/daily/NVDA?before=2026-09-30'));
+  await failure;
+  assert.equal(page.data.historyBack, false);
+  assert.equal(page.data.history[0].day, '2026-09-30');
+  assert.match(page.data.error, /网络/);
+  const older = dailyPayload();
+  older.history.items[0].id = 2;
+  older.history.items[0].day = '2026-09-29';
+  const success = page.onHistoryNext();
+  platform.respond(platform.next('GET', '/api/daily/NVDA?before=2026-09-30'), 200, older);
+  await success;
+  assert.equal(page.data.historyBack, true);
+  assert.equal(page.data.history.length, 1);
+  assert.equal(page.data.history[0].day, '2026-09-29');
+  assert.ok(Buffer.byteLength(JSON.stringify(page.data)) < 1024 * 1024);
+  const back = page.onHistoryBack();
+  platform.respond(platform.next('GET', '/api/daily/NVDA'), 200, first);
+  await back;
+  const olderLessons = page.onLessonNext();
+  platform.respond(platform.next('GET', '/api/daily/NVDA?lesson_before=1'), 200, dailyPayload('NVDA', true));
+  await olderLessons;
+  assert.equal(page.data.lessonBack, true);
+  page.onUnload();
+});
+
+test('Daily response after hiding is ignored and refresh resumes when shown again', async () => {
+  const platform = fakeWx(savedSession());
+  const page = mount(createClient(platform, config), platform, dailyDefinition);
+  await openDaily(platform, page);
+  const refresh = page.onRefresh();
+  const request = platform.next('GET', '/api/daily/NVDA');
+  page.onHide();
+  platform.respond(request, 200, dailyPayload('NVDA', true));
+  await refresh;
+  assert.equal(page.data.counts.scored, 1);
+  const shown = page.onShow();
+  platform.respond(platform.next('GET', '/api/daily/NVDA'), 200, dailyPayload('NVDA', true));
+  await shown;
+  assert.equal(page.data.counts.scored, 0);
+  page.onUnload();
+});
+
+test('Daily 401 clears data; invalid ticker never sends a request', async () => {
+  const platform = fakeWx(savedSession());
+  const page = mount(createClient(platform, config), platform, dailyDefinition);
+  await openDaily(platform, page);
+  const count = platform.requests.length;
+  await page.selectTicker('0700.HK');
+  assert.equal(platform.requests.length, count);
+  assert.match(page.data.error, /美股/);
+  const refresh = page.onRefresh();
+  platform.respond(platform.next('GET', '/api/daily/NVDA'), 401, { detail: 'expired' });
+  await refresh;
+  assert.equal(page.data.authed, false);
+  assert.equal(page.data.hasData, false);
+  assert.deepEqual(page.data.history, []);
+  assert.deepEqual(page.data.lessons, []);
+  page.onUnload();
+});
+
+test('Native tabs register both pages and daily reports are not rendered as rich HTML', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const app = JSON.parse(fs.readFileSync(path.join(__dirname, '../app.json'), 'utf8'));
+  assert.deepEqual(app.tabBar.list.map((entry) => entry.pagePath), ['pages/index/index', 'pages/daily/daily']);
+  assert.ok(app.pages.includes('pages/daily/daily'));
+  const template = fs.readFileSync(path.join(__dirname, '../pages/daily/daily.wxml'), 'utf8');
+  assert.equal(template.includes('<rich-text'), false);
+  assert.ok(template.includes('暂无已结算样本'));
+  for (const [, handler] of template.matchAll(/bind[a-z]+="(\w+)"/g)) {
+    assert.equal(typeof dailyDefinition[handler], 'function', `Missing daily handler ${handler}`);
+  }
+});
+
+test('Maximum-length daily text stays below API and WeChat page limits', async () => {
+  const data = dailyPayload();
+  const first = data.history.items[0];
+  first.forecast.rationale = '研'.repeat(6000);
+  first.forecast.risks = '险'.repeat(4000);
+  first.reflection = '思'.repeat(6000);
+  first.candidate = { condition: '境'.repeat(800), advice: '验'.repeat(1200) };
+  data.history.items = Array.from({ length: 5 }, (_, index) => Object.assign({}, first, { id: index + 1 }));
+  data.lessons.items = Array.from({ length: 10 }, (_, index) => Object.assign({}, data.lessons.items[0], {
+    id: index + 1, condition: '境'.repeat(800), advice: '验'.repeat(1200)
+  }));
+  assert.ok(Buffer.byteLength(JSON.stringify(data)) < 600000);
+  const platform = fakeWx(savedSession());
+  const page = mount(createClient(platform, config), platform, dailyDefinition);
+  const setData = page.setData.bind(page);
+  page.setData = (values) => {
+    assert.ok(Buffer.byteLength(JSON.stringify(values)) < 1024 * 1024);
+    setData(values);
+  };
+  await openDaily(platform, page, data);
+  assert.equal(page.data.history.length, 5);
+  assert.equal(page.data.lessons.length, 10);
+  assert.ok(Buffer.byteLength(JSON.stringify(page.data)) < 1024 * 1024);
+  page.onToggleDay({ currentTarget: { dataset: { id: '1' } } });
+  assert.equal(page.data.history[0].open, true);
+  page.onUnload();
 });
 
 async function main() {

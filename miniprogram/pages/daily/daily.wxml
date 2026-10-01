@@ -1,0 +1,124 @@
+<view class="page">
+  <view class="hero">
+    <view class="brand-row"><view class="brand-mark">知</view><text class="eyebrow">DAILY REVIEW</text><view class="beta">用结果检验判断</view></view>
+    <text class="hero-title">预测之后，认真复盘。</text>
+    <text class="hero-subtitle">看真实误差，也看每一天留下的经验。</text>
+    <view class="hero-tags"><text>盘前冻结</text><text>盘后核验</text><text>经验积累</text></view>
+  </view>
+
+  <view wx:if="{{!authed}}" class="card login-card">
+    <text class="card-title">登录后查看每日复盘</text>
+    <text class="muted intro">这里展示统一定时任务生成的共享研究，不是其他用户的个人报告。查看不消耗每日 3 次手动研究额度。</text>
+    <button class="button-primary" bindtap="onGoLogin">前往 AI 研究，微信登录</button>
+  </view>
+
+  <block wx:else>
+    <view class="card selector-card">
+      <view class="card-heading"><text class="card-title">跟踪哪只股票？</text><text class="step-label">只读 · 不扣额度</text></view>
+      <view class="examples stock-tabs">
+        <button wx:for="{{tickers}}" wx:key="*this" class="{{ticker === item ? 'stock-selected' : ''}}" data-ticker="{{item}}" bindtap="onSelectTicker">{{item}}</button>
+      </view>
+      <view class="search-row">
+        <input class="ticker-input" value="{{inputTicker}}" bindinput="onInput" bindconfirm="onSearch" confirm-type="search" maxlength="12" placeholder="输入美股代码" aria-label="每日复盘股票代码" />
+        <button class="search-button" bindtap="onSearch">查看</button>
+      </view>
+      <text class="small">查询不会新增定时任务；其他股票需要先由管理员配置每日跟踪。</text>
+    </view>
+
+    <view wx:if="{{error}}" class="error" role="alert">
+      <text selectable>{{error}}</text>
+      <text wx:if="{{hasData}}" class="small">下方保留上次成功读取的数据，尚未更新。</text>
+      <button class="button-text error-retry" bindtap="onRefresh" disabled="{{loading}}">重新读取</button>
+    </view>
+    <view wx:if="{{loading}}" class="loading-note"><text>正在读取 {{ticker}} 的复盘数据…</text></view>
+
+    <block wx:if="{{hasData}}">
+      <view class="review-heading">
+        <view><text class="result-ticker">{{ticker}}</text><text class="small">共享定时研究 · {{tracked ? '已配置跟踪' : '不在默认跟踪列表'}}</text></view>
+        <button class="button-text" bindtap="onRefresh" disabled="{{loading}}">刷新</button>
+      </view>
+      <view class="window-tabs">
+        <button wx:for="{{windows}}" wx:key="key" class="{{window === item.key ? 'window-selected' : ''}}" data-key="{{item.key}}" bindtap="onWindow">{{item.label}}</button>
+      </view>
+      <view class="sample-row"><text>有效评分样本 <text class="sample-count">{{counts.scored}}</text> 个</text><text>本窗口预测 {{counts.predictions}} 次</text></view>
+
+      <view wx:if="{{counts.scored === 0}}" class="notice empty-score">
+        <text class="notice-title">暂无已结算样本，不代表准确率为 0</text>
+        <text>{{counts.predictions ? '预测尚未完成有效核验，或属于迟到、价格口径变化等排除样本。' : tracked ? '等待首轮盘前预测和盘后核验完成后，这里会显示实际成绩。' : '这只股票尚无本窗口的每日预测记录；可在 AI 研究中手动分析。'}}</text>
+      </view>
+
+      <view class="metric-grid">
+        <view class="metric-card" wx:for="{{metrics}}" wx:key="label">
+          <text class="metric-label">{{item.label}}</text>
+          <text class="metric-value">{{item.value}}</text>
+          <text class="small metric-hint">{{item.hint}}</text>
+        </view>
+      </view>
+      <view class="baseline-card">
+        <view><text class="baseline-title">和简单预测比一比</text><text class="baseline-note">假设“今天收盘价 = 昨天收盘价”</text></view>
+        <view class="baseline-value"><text>{{baseline}}</text><text class="baseline-note">平均价格误差</text></view>
+      </view>
+      <view class="count-strip">
+        <text>待行情 {{counts.pending}}</text><text>待复盘 {{counts.awaiting_reflection}}</text>
+        <text>迟到 {{counts.late}}</text><text>排除 {{counts.excluded}}</text>
+      </view>
+      <text wx:if="{{mixedVersions}}" class="version-note">本窗口包含不同模型或配置版本，不能把差异全部归因于经验学习。</text>
+      <text class="small metric-explainer">方向以收盘价是否高于前一交易日收盘价判断，平盘计为“不涨”。价格单位为美元；区间指收盘价区间，不是日内最高/最低价。小样本不能证明预测能力。</text>
+
+      <view class="card history-card">
+        <view class="card-heading"><text class="card-title">逐日对照</text><text class="step-label">每页 5 条 · 最新在前</text></view>
+        <view wx:if="{{!history.length}}" class="empty-state"><view class="empty-mark">·</view><text>还没有每日预测记录</text><text class="small">没有记录时不会生成示例成绩。</text></view>
+        <view class="day-item" wx:for="{{history}}" wx:key="id">
+          <view class="day-heading"><text class="day-date">{{item.day}}</text><text class="review-status review-{{item.status}}">{{item.statusLabel}}</text></view>
+          <view class="price-comparison">
+            <view><text class="small">预测收盘</text><text class="price-value">{{item.predicted}}</text></view>
+            <view><text class="small">实际收盘</text><text class="price-value">{{item.actual}}</text></view>
+            <view><text class="small">价格误差</text><text class="price-value">{{item.error}}</text></view>
+          </view>
+          <view class="day-tags"><text>{{item.direction}}</text><text>{{item.directionResult}}</text></view>
+          <button class="report-toggle" data-id="{{item.id}}" bindtap="onToggleDay"><text>预测依据与盘后反思</text><text>{{item.open ? '收起 −' : '展开 +'}}</text></button>
+          <view wx:if="{{item.open}}" class="day-details">
+            <text class="small">前收盘 {{item.reference}}（{{item.referenceDate}}）</text>
+            <text class="small">80% 收盘区间 {{item.interval}} · {{item.intervalResult}}</text>
+            <text class="small">上涨概率 {{item.upProbability}}</text>
+            <text class="small">冻结时间 {{item.createdLabel}}（北京时间）</text>
+            <text class="detail-label">盘前依据</text><text selectable class="report-text">{{item.rationale}}</text>
+            <text class="detail-label">风险与不确定性</text><text selectable class="report-text">{{item.risks}}</text>
+            <text class="detail-label">盘后反思</text>
+            <text wx:if="{{item.reflection}}" selectable class="report-text">{{item.reflection}}</text>
+            <text wx:else class="muted">{{item.status === 'late' || item.status === 'excluded' ? '此样本不生成有效经验。' : '尚未生成反思，请等待有效行情与复盘完成。'}}</text>
+            <block wx:if="{{item.lessonAdvice}}">
+              <text class="detail-label">当天提出的候选经验</text>
+              <text selectable class="report-text">适用情形：{{item.lessonCondition}}</text>
+              <text selectable class="report-text">{{item.lessonAdvice}}</text>
+            </block>
+          </view>
+        </view>
+        <view class="pagination" wx:if="{{historyBack || historyNext}}">
+          <button bindtap="onHistoryBack" disabled="{{loading || !historyBack}}">较新记录</button>
+          <button bindtap="onHistoryNext" disabled="{{loading || !historyNext}}">更早记录</button>
+        </view>
+      </view>
+
+      <view class="card lessons-card">
+        <view class="card-heading"><text class="card-title">积累了什么经验？</text><text class="step-label">每页 10 条</text></view>
+        <text class="muted lesson-intro">经验先作为待验证假设。支持与反证来自后续复盘，不是因果证明；停用或过期经验不会再注入分析。</text>
+        <view wx:if="{{!lessons.length}}" class="empty-state"><view class="empty-mark">·</view><text>暂时没有可展示的经验</text><text class="small">一次涨跌不会自动变成一条可靠规律。</text></view>
+        <view class="lesson-item" wx:for="{{lessons}}" wx:key="id">
+          <view class="day-heading"><text class="lesson-role">{{item.roleLabel}}</text><text class="lesson-status lesson-{{item.status}}">{{item.statusLabel}}</text></view>
+          <text class="detail-label">适用情形</text><text selectable class="report-text">{{item.condition}}</text>
+          <text class="detail-label">下次怎样改进</text><text selectable class="report-text">{{item.advice}}</text>
+          <view class="evidence-row"><text>支持 {{item.supports}} 次</text><text>反证 {{item.contradicts}} 次</text></view>
+          <text class="small">来源交易日 {{item.sourceDay}} · 经验 #{{item.id}}</text>
+          <text class="small">最近验证：{{item.testedLabel}}</text>
+        </view>
+        <view class="pagination" wx:if="{{lessonBack || lessonNext}}">
+          <button bindtap="onLessonBack" disabled="{{loading || !lessonBack}}">较新经验</button>
+          <button bindtap="onLessonNext" disabled="{{loading || !lessonNext}}">更早经验</button>
+        </view>
+      </view>
+      <view class="notice disclaimer"><text class="notice-title">研究记录，不是收益承诺</text><text>经验反馈不保证越来越准。当前分数衡量预测结果，不包含成交、手续费或交易收益；AI 复盘也可能判断错误，不构成投资建议。</text></view>
+      <view class="footer"><text>读取于 {{updatedLabel}}（北京时间）</text><text>交易日按美东日期展示 · 累计/20/60 交易日仅切换指标窗口</text></view>
+    </block>
+  </block>
+</view>

@@ -1,5 +1,15 @@
 {
-  "pages": ["pages/index/index"],
+  "pages": ["pages/index/index", "pages/daily/daily"],
+  "tabBar": {
+    "color": "#748198",
+    "selectedColor": "#2468e8",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "white",
+    "list": [
+      { "pagePath": "pages/index/index", "text": "AI 研究" },
+      { "pagePath": "pages/daily/daily", "text": "每日复盘" }
+    ]
+  },
   "window": {
     "navigationBarTitleText": "知股 · AI 研究",
     "navigationBarBackgroundColor": "#f5f7fb",

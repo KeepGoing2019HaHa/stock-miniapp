@@ -1,0 +1,52 @@
+@import "../index/index.wxss";
+
+.hero-title { font-size: 45rpx; }
+.selector-card .card-heading { margin-bottom: 14rpx; }
+.stock-tabs { margin: 18rpx 0 22rpx; }
+.stock-tabs button { flex: 1; padding: 14rpx 18rpx; font-size: 26rpx; font-weight: 600; text-align: center; }
+.stock-tabs .stock-selected { background: #2468e8; color: #fff; }
+.search-row { display: flex; gap: 16rpx; margin-bottom: 16rpx; }
+.search-row input { flex: 1; min-width: 0; height: 82rpx; font-size: 28rpx; }
+.search-button { margin: 0; padding: 18rpx 28rpx; line-height: 1.6; border-radius: 15rpx; font-size: 26rpx; color: #2468e8; background: #eaf1ff; }
+.loading-note { padding: 12rpx 4rpx 28rpx; color: #64799c; font-size: 24rpx; }
+.review-heading, .sample-row, .day-heading { display: flex; align-items: center; justify-content: space-between; gap: 12rpx; }
+.review-heading { margin: 6rpx 4rpx 26rpx; }
+.window-tabs { display: flex; padding: 7rpx; gap: 4rpx; background: #e9eef7; border-radius: 17rpx; }
+.window-tabs button { flex: 1; padding: 14rpx 2rpx; margin: 0; line-height: 1.5; font-size: 24rpx; border-radius: 12rpx; color: #67778f; background: transparent; }
+.window-tabs .window-selected { background: #fff; color: #2468e8; font-weight: 600; box-shadow: 0 3rpx 10rpx rgba(24, 45, 82, .04); }
+.sample-row { margin: 24rpx 4rpx 20rpx; font-size: 23rpx; color: #6a7b92; flex-wrap: wrap; }
+.sample-count { color: #213d64; font-weight: 700; font-size: 29rpx; }
+.empty-score { margin-bottom: 22rpx; border: 1rpx solid #dfe9fa; background: #eef4ff; }
+.metric-grid { display: flex; flex-wrap: wrap; gap: 18rpx; }
+.metric-card { width: calc(50% - 9rpx); min-width: 0; padding: 26rpx 22rpx; background: #fff; border: 1rpx solid #e8edf5; border-radius: 23rpx; }
+.metric-label { display: block; color: #6b7a90; font-size: 23rpx; }
+.metric-value { display: block; color: #203b60; font-size: 43rpx; font-weight: 700; margin: 7rpx 0; word-break: break-all; }
+.metric-hint { font-size: 19rpx; min-height: 50rpx; }
+.baseline-card { display: flex; justify-content: space-between; align-items: center; gap: 18rpx; background: #193456; color: #fff; border-radius: 21rpx; padding: 25rpx; margin: 20rpx 0 15rpx; }
+.baseline-title { display: block; font-size: 25rpx; font-weight: 600; }
+.baseline-note { display: block; font-size: 19rpx; color: #bacbe2; margin-top: 5rpx; }
+.baseline-value { text-align: right; font-size: 31rpx; font-weight: 650; flex-shrink: 0; }
+.count-strip { display: flex; flex-wrap: wrap; gap: 16rpx; color: #748198; font-size: 21rpx; margin: 18rpx 4rpx; }
+.metric-explainer { margin: 0 4rpx 28rpx; font-size: 21rpx; line-height: 1.9; }
+.version-note { display: block; padding: 16rpx; margin: 14rpx 0; border-radius: 12rpx; color: #86652b; background: #fff8e7; font-size: 22rpx; }
+.day-item, .lesson-item { border-top: 1rpx solid #ebeff5; padding: 24rpx 0 2rpx; }
+.day-date { font-size: 26rpx; font-weight: 650; color: #344b6c; }
+.review-status, .lesson-status { font-size: 19rpx; padding: 5rpx 12rpx; border-radius: 10rpx; background: #edf3fe; color: #3766a9; flex-shrink: 0; }
+.review-reviewed, .lesson-supported { background: #e8f6f0; color: #167756; }
+.review-late, .review-excluded, .lesson-retired, .lesson-expired { background: #f1f2f5; color: #778296; }
+.lesson-candidate { background: #fff4db; color: #946b17; }
+.price-comparison { display: flex; gap: 12rpx; margin: 23rpx 0 14rpx; }
+.price-comparison view { flex: 1; min-width: 0; }
+.price-comparison .small { font-size: 20rpx; }
+.price-value { display: block; font-size: 30rpx; font-weight: 650; color: #2b4569; word-break: break-all; }
+.day-tags { display: flex; flex-wrap: wrap; gap: 15rpx; font-size: 21rpx; color: #68809c; }
+.day-details { padding-bottom: 25rpx; }
+.detail-label { display: block; margin: 24rpx 0 8rpx; color: #71839c; font-size: 22rpx; font-weight: 600; }
+.day-details .report-text, .lesson-item .report-text { font-size: 24rpx; }
+.pagination { display: flex; gap: 16rpx; padding-top: 20rpx; }
+.pagination button { flex: 1; margin: 0; padding: 16rpx 12rpx; line-height: 1.6; font-size: 23rpx; border-radius: 12rpx; background: #f0f4fa; color: #446491; }
+.lesson-intro { font-size: 23rpx; margin-bottom: 22rpx; }
+.lesson-role { color: #344b6c; font-size: 26rpx; font-weight: 600; }
+.lesson-item { padding-bottom: 26rpx; }
+.evidence-row { display: flex; gap: 24rpx; font-size: 23rpx; color: #526b8b; margin: 24rpx 0 14rpx; }
+.disclaimer { margin-bottom: 20rpx; }
