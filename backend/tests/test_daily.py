@@ -97,6 +97,30 @@ class DailyApiTests(unittest.TestCase):
         self.assertEqual(self.settings.daily_database.read_bytes(), original)
         self.assertNotIn(str(self.settings.daily_database), json.dumps(result))
 
+    def test_evolution_is_msft_only_authenticated_and_does_not_consume_quota(self):
+        self.assertEqual(self.client.get("/api/evolution").status_code, 401)
+        self.assertEqual(self.client.get("/api/evolution?before=invalid", headers=self.headers).status_code, 422)
+        self.reader.assert_not_awaited()
+        self.reader.return_value = {"ticker": "MSFT", "champion": None, "summary": {}, "history": {}}
+        result = self.client.get("/api/evolution?before=2026-10-01", headers=self.headers)
+        self.assertEqual(result.status_code, 200)
+        self.reader.assert_awaited_once_with("MSFT", "2026-10-01", None, evolution=True)
+        self.assertFalse(result.json()["uses_quota"])
+        self.assertEqual(self.store.me("daily-user")["used_today"], 0)
+        self.assertEqual(self.store.list_jobs("daily-user"), [])
+
+    def test_evolution_reader_does_not_create_missing_database(self):
+        result = asyncio.run(DailyReader(self.settings).read("MSFT", None, None, evolution=True))
+        self.assertEqual(result["summary"]["samples"], 0)
+        self.assertEqual(result["history"]["items"], [])
+        self.assertFalse(self.settings.daily_database.with_name("evolution.sqlite3").exists())
+
+    def test_evolution_errors_hide_private_details(self):
+        self.reader.side_effect = OSError("PRIVATE provider URL")
+        result = self.client.get("/api/evolution", headers=self.headers)
+        self.assertEqual(result.status_code, 503)
+        self.assertNotIn("PRIVATE", result.text)
+
 
 class DailyProcessTests(unittest.IsolatedAsyncioTestCase):
     async def test_cancelled_reader_terminates_its_subprocess(self):

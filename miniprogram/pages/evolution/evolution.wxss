@@ -1,0 +1,47 @@
+.evolution-page { padding: 32rpx 28rpx 56rpx; color: #21334b; letter-spacing: 0; }
+.heading, .run-heading, .section-title, .check { display: flex; justify-content: space-between; align-items: center; gap: 16rpx; }
+.heading { padding: 8rpx 0 30rpx; border-bottom: 1rpx solid #dce3ed; }
+.ticker { font-size: 48rpx; font-weight: 750; display: block; }
+.subtitle { font-size: 25rpx; color: #5d718c; }
+.market { font-size: 19rpx; color: #5d718c; }
+.active-version { padding: 28rpx 0; }
+.label { display: block; color: #697a90; font-size: 22rpx; }
+.version { display: block; font-size: 29rpx; font-weight: 650; overflow-wrap: anywhere; }
+.models, .branch, .detail-text { display: block; overflow-wrap: anywhere; word-break: break-word; }
+.models { color: #3261a8; font-size: 23rpx; margin-top: 8rpx; }
+.counts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1rpx solid #dce3ed; border-bottom: 1rpx solid #dce3ed; padding: 22rpx 0; }
+.counts > view { text-align: center; }
+.count { display: block; font-size: 37rpx; font-weight: 650; }
+.section-title { margin: 24rpx 0 12rpx; font-weight: 650; }
+button { margin: 0; border-radius: 12rpx; padding: 10rpx 22rpx; font-size: 23rpx; line-height: 1.7; color: #2468e8; background: #e9eff9; }
+.run { padding: 26rpx 22rpx; margin-bottom: 20rpx; background: #fff; border: 1rpx solid #e0e6ee; border-radius: 12rpx; }
+.day { font-size: 28rpx; font-weight: 650; }
+.status { font-size: 21rpx; color: #68798b; flex-shrink: 0; }
+.status-promoted, .passed { color: #147858; }
+.status-rejected, .status-failed, .not-passed { color: #b64748; }
+.status-running { color: #2468e8; }
+.summary { display: block; font-size: 27rpx; font-weight: 600; margin: 20rpx 0 10rpx; overflow-wrap: anywhere; }
+.rationale { display: block; font-size: 24rpx; color: #51637a; white-space: pre-wrap; overflow-wrap: anywhere; }
+.branch { font-size: 21rpx; color: #68798b; margin-top: 14rpx; }
+.comparison { margin: 22rpx 0; border-top: 1rpx solid #e6eaf0; }
+.comparison-row { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 8rpx; padding: 13rpx 0; border-bottom: 1rpx solid #edf0f5; font-size: 22rpx; }
+.comparison-row text { min-width: 0; overflow-wrap: anywhere; }
+.comparison-row text:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
+.column-head { color: #75859b; font-size: 20rpx; }
+.gate { display: block; border-left: 4rpx solid #b3c5df; padding-left: 14rpx; font-size: 23rpx; margin: 20rpx 0; overflow-wrap: anywhere; }
+.muted, .footer { display: block; color: #76859a; font-size: 21rpx; }
+.details-toggle { width: 100%; text-align: left; background: transparent; padding: 18rpx 0 0; }
+.details { border-top: 1rpx solid #e6eaf0; margin-top: 20rpx; padding-top: 6rpx; }
+.details .label { margin-top: 20rpx; }
+.detail-text { font-size: 23rpx; white-space: pre-wrap; margin-top: 6rpx; }
+.mono { font-family: monospace; word-break: break-all; font-size: 21rpx; }
+.check { padding: 14rpx 0; font-size: 22rpx; }
+.check text:last-child { flex-shrink: 0; }
+.empty { padding: 60rpx 0; text-align: center; color: #75859b; }
+.empty button { margin: 24rpx auto; max-width: 300rpx; }
+.error { padding: 24rpx 0; color: #b64748; }
+.error button { margin-top: 16rpx; }
+.loading { padding: 24rpx 0; }
+.pagination { display: flex; gap: 16rpx; margin: 24rpx 0; }
+.pagination button { flex: 1; }
+.footer { margin-top: 16rpx; }

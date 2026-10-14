@@ -5,6 +5,7 @@ import logging
 import time
 from collections import OrderedDict
 from contextlib import asynccontextmanager
+from datetime import date
 from typing import Annotated
 from uuid import UUID
 
@@ -246,6 +247,16 @@ def create_app(settings: Settings | None = None, *, start_worker=True) -> FastAP
     @app.get("/api/daily")
     def daily_catalog(identity: str = Depends(user_id)):
         return {"tickers": list(settings.daily_tickers), "scope": "shared_research", "uses_quota": False}
+
+    @app.get("/api/evolution")
+    async def evolution_research(before: date | None = None, identity: str = Depends(user_id)):
+        limiter.check("evolution:" + identity, 20)
+        try:
+            data = await daily_reader.read("MSFT", before.isoformat() if before else None, None, evolution=True)
+        except (OSError, TimeoutError, ValueError):
+            logger.exception("Evolution research data unavailable")
+            raise HTTPException(503, "进化记录暂不可用，请稍后重试") from None
+        return {**data, "scope": "shared_research", "uses_quota": False}
 
     @app.get("/api/daily/{ticker}")
     async def daily_research(query: Annotated[DailyQuery, Depends()], identity: str = Depends(user_id)):

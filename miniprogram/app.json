@@ -1,5 +1,5 @@
 {
-  "pages": ["pages/index/index", "pages/daily/daily"],
+  "pages": ["pages/index/index", "pages/daily/daily", "pages/evolution/evolution"],
   "tabBar": {
     "color": "#748198",
     "selectedColor": "#2468e8",
@@ -7,7 +7,8 @@
     "borderStyle": "white",
     "list": [
       { "pagePath": "pages/index/index", "text": "AI 研究" },
-      { "pagePath": "pages/daily/daily", "text": "每日复盘" }
+      { "pagePath": "pages/daily/daily", "text": "每日复盘" },
+      { "pagePath": "pages/evolution/evolution", "text": "MSFT 进化" }
     ]
   },
   "window": {

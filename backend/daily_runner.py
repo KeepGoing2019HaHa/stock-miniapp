@@ -13,15 +13,24 @@ def main():
     parser.add_argument("--ticker", required=True)
     parser.add_argument("--before")
     parser.add_argument("--lesson-before", type=int)
+    parser.add_argument("--evolution", action="store_true")
     args = parser.parse_args()
     sys.path.insert(0, str(args.project))
     from tradingagents.daily.dashboard import snapshot
     from tradingagents.daily.store import DailyStore
 
-    result = snapshot(
-        DailyStore(args.database, read_only=True), args.ticker,
-        before=args.before, lesson_before=args.lesson_before,
-    )
+    if args.evolution:
+        from tradingagents.evolution.dashboard import snapshot as evolution_snapshot
+        from tradingagents.evolution.store import EvolutionStore
+
+        result = evolution_snapshot(
+            EvolutionStore(args.database.with_name("evolution.sqlite3"), read_only=True), before=args.before,
+        )
+    else:
+        result = snapshot(
+            DailyStore(args.database, read_only=True), args.ticker,
+            before=args.before, lesson_before=args.lesson_before,
+        )
     text = json.dumps(result, ensure_ascii=False, allow_nan=False)
     if len(text.encode("utf-8")) > 600_000:
         raise ValueError("Daily dashboard exceeds response size limit")

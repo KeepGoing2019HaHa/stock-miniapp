@@ -71,6 +71,8 @@ require('../pages/index/index');
 const indexDefinition = definition;
 require('../pages/daily/daily');
 const dailyDefinition = definition;
+require('../pages/evolution/evolution');
+const evolutionDefinition = definition;
 definition = indexDefinition;
 function mount(client, platform, pageDefinition = definition) {
   global.getApp = () => ({ client });
@@ -691,11 +693,11 @@ test('Daily 401 clears data; invalid ticker never sends a request', async () => 
   page.onUnload();
 });
 
-test('Native tabs register both pages and daily reports are not rendered as rich HTML', () => {
+test('Native tabs register three pages and daily reports are not rendered as rich HTML', () => {
   const fs = require('node:fs');
   const path = require('node:path');
   const app = JSON.parse(fs.readFileSync(path.join(__dirname, '../app.json'), 'utf8'));
-  assert.deepEqual(app.tabBar.list.map((entry) => entry.pagePath), ['pages/index/index', 'pages/daily/daily']);
+  assert.deepEqual(app.tabBar.list.map((entry) => entry.pagePath), ['pages/index/index', 'pages/daily/daily', 'pages/evolution/evolution']);
   assert.ok(app.pages.includes('pages/daily/daily'));
   const template = fs.readFileSync(path.join(__dirname, '../pages/daily/daily.wxml'), 'utf8');
   assert.equal(template.includes('<rich-text'), false);
@@ -731,6 +733,108 @@ test('Maximum-length daily text stays below API and WeChat page limits', async (
   page.onToggleDay({ currentTarget: { dataset: { id: '1' } } });
   assert.equal(page.data.history[0].open, true);
   page.onUnload();
+});
+
+function evolutionPayload(day = '2026-10-01') {
+  return { ticker: 'MSFT', generated_at: day + 'T23:00:00Z', champion: null,
+    summary: { samples: 15, labelled: 15, fresh: 0 },
+    history: { next_before: null, items: [{ day, status: 'rejected', summary: '<script>literal</script>',
+      rationale: 'Development-only hypothesis', started_at: day + 'T22:00:00Z',
+      strategy: { quick_model: 'new', deep_model: 'deep', prompt: 'candidate', tools: ['get_news'] },
+      previous_strategy: { quick_model: 'old', deep_model: 'deep', prompt: 'previous', tools: ['get_news'] },
+      backtest: { current: { mae: 0, direction_accuracy: 0, brier: 0, interval_score: 0 },
+        candidate: { mae: 1, direction_accuracy: 0, brier: 0.2, interval_score: 1 }, checks: {} },
+      sample_results: [] }] } };
+}
+
+test('Evolution tab requires login, renders literal metrics and never starts a job', async () => {
+  const anonymous = fakeWx();
+  const loginPage = mount(createClient(anonymous, config), anonymous, evolutionDefinition);
+  await loginPage.onShow();
+  assert.equal(anonymous.requests.length, 0);
+  loginPage.onGoLogin();
+  assert.deepEqual(anonymous.switches, ['/pages/index/index']);
+  loginPage.onUnload();
+  const platform = fakeWx(savedSession());
+  const page = mount(createClient(platform, config), platform, evolutionDefinition);
+  const request = page.onShow();
+  platform.respond(platform.next('GET', '/api/evolution'), 200, evolutionPayload());
+  await request;
+  assert.equal(page.data.items[0].comparisons[0].label, '方向准确率');
+  assert.equal(page.data.items[0].comparisons[0].current, '0.0%');
+  assert.equal(page.data.items[0].comparisons[1].current, '0.000');
+  assert.equal(page.data.items[0].summary, '<script>literal</script>');
+  page.onToggle({ currentTarget: { dataset: { day: '2026-10-01' } } });
+  assert.equal(page.data.items[0].open, true);
+  assert.ok(platform.requests.every((entry) => entry.method === 'GET'));
+  page.onUnload();
+});
+
+test('Evolution shows only the gate rules actually used by new and historical runs', () => {
+  const { display } = require('../utils/evolution');
+  const payload = evolutionPayload();
+  const backtest = payload.history.items[0].backtest;
+  backtest.selection_rule = 'direction_then_mae_v2';
+  backtest.checks = { direction_first_improved: true, direction_not_worse: true, fresh_holdout: true };
+  const current = display(payload).items[0];
+  assert.deepEqual(current.checks.map((check) => check.key),
+    ['direction_first_improved', 'direction_not_worse', 'fresh_holdout']);
+  assert.ok(current.checks.every((check) => check.passed));
+  delete backtest.selection_rule;
+  backtest.checks = { mae_improved_1pct: false, paired_gain_positive: false };
+  const historical = display(payload).items[0];
+  assert.deepEqual(historical.checks.map((check) => check.key), ['mae_improved_1pct', 'paired_gain_positive']);
+  assert.ok(historical.checks.every((check) => !check.passed));
+});
+
+test('Evolution pagination preserves data and cursor when a request fails', async () => {
+  const platform = fakeWx(savedSession());
+  const page = mount(createClient(platform, config), platform, evolutionDefinition);
+  const initial = page.onShow();
+  const payload = evolutionPayload();
+  payload.history.next_before = '2026-10-01';
+  platform.respond(platform.next('GET', '/api/evolution'), 200, payload);
+  await initial;
+  const failed = page.onNext();
+  platform.fail(platform.next('GET', '/api/evolution?before=2026-10-01'));
+  await failed;
+  assert.equal(page.data.back, false);
+  assert.equal(page.data.items[0].day, '2026-10-01');
+  const next = page.onNext();
+  platform.respond(platform.next('GET', '/api/evolution?before=2026-10-01'), 200, evolutionPayload('2026-09-30'));
+  await next;
+  assert.equal(page.data.items.length, 1);
+  assert.equal(page.data.items[0].day, '2026-09-30');
+  assert.equal(page.data.back, true);
+  page.onUnload();
+});
+
+test('Evolution hidden and expired-session responses cannot repopulate the page', async () => {
+  const platform = fakeWx(savedSession());
+  const page = mount(createClient(platform, config), platform, evolutionDefinition);
+  const initial = page.onShow();
+  const pending = platform.next('GET', '/api/evolution');
+  page.onHide();
+  platform.respond(pending, 200, evolutionPayload());
+  await initial;
+  assert.equal(page.data.hasData, false);
+  const shown = page.onShow();
+  platform.respond(platform.next('GET', '/api/evolution'), 401, { detail: 'expired' });
+  await shown;
+  assert.equal(page.data.authed, false);
+  assert.deepEqual(page.data.items, []);
+  page.onUnload();
+});
+
+test('Evolution template handlers exist and prompt text is never rendered as HTML', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const template = fs.readFileSync(path.join(__dirname, '../pages/evolution/evolution.wxml'), 'utf8');
+  assert.equal(template.includes('<rich-text'), false);
+  for (const [, handler] of template.matchAll(/bind[a-z]+="(\w+)"/g)) {
+    assert.equal(typeof evolutionDefinition[handler], 'function', `Missing evolution handler ${handler}`);
+  }
+  assert.throws(() => require('../utils/evolution').display({ ticker: 'NVDA' }));
 });
 
 async function main() {

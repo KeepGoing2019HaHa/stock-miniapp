@@ -1,0 +1,48 @@
+<view class="evolution-page">
+  <view class="heading"><view><text class="ticker">MSFT</text><text class="subtitle">每日策略进化</text></view><text class="market">NASDAQ / USD</text></view>
+  <view wx:if="{{!authed}}" class="empty"><text>登录后查看进化记录</text><button bindtap="onGoLogin">微信登录</button></view>
+  <block wx:else>
+    <view wx:if="{{error}}" class="error" role="alert"><text>{{error}}</text><button bindtap="onRefresh" disabled="{{loading}}">重试</button></view>
+    <text wx:if="{{loading}}" class="muted loading">正在读取进化记录...</text>
+    <block wx:if="{{hasData}}">
+      <view class="active-version"><text class="label">当前版本</text><text selectable class="version">{{champion ? champion.id : '等待初始化'}}</text><text wx:if="{{champion}}" class="models">{{champion.strategy.quick_model}} / {{champion.strategy.deep_model}}</text></view>
+      <view class="counts"><view><text class="count">{{summary.samples}}</text><text class="label">冻结样本</text></view><view><text class="count">{{summary.labelled}}</text><text class="label">已结算</text></view><view><text class="count">{{summary.fresh}}</text><text class="label">尚未测试</text></view></view>
+      <view class="section-title"><text>进化日志</text><button bindtap="onRefresh" disabled="{{loading}}">刷新</button></view>
+      <view wx:if="{{!items.length}}" class="empty"><text>暂无进化记录</text></view>
+      <view wx:for="{{items}}" wx:key="day" class="run">
+        <view class="run-heading"><text class="day">{{item.day}}</text><text class="status status-{{item.status}}">{{item.statusLabel}}</text></view>
+        <text class="summary" selectable>{{item.summary}}</text>
+        <text class="rationale" selectable>{{item.rationale}}</text>
+        <text wx:if="{{item.branch}}" class="branch" selectable>{{item.branch}}</text>
+        <view wx:if="{{item.backtest}}" class="comparison">
+          <text class="label">{{item.dataset.mode === 'fresh_holdout' ? '独立保留集验收' : '开发集诊断回测'}}</text>
+          <view class="comparison-row column-head"><text>回测指标</text><text>上一版本</text><text>候选版本</text></view>
+          <view class="comparison-row" wx:for="{{item.comparisons}}" wx:for-item="metric" wx:key="label"><text>{{metric.label}}</text><text>{{metric.current}}</text><text>{{metric.candidate}}</text></view>
+        </view>
+        <text wx:if="{{item.gate_reason}}" class="gate" selectable>{{item.gate_reason}}</text>
+        <text wx:if="{{item.dataset}}" class="muted">已结算 {{item.dataset.total}} · 未使用 {{item.dataset.fresh}} · 最少开发 {{item.dataset.minimum_train}} / 测试 {{item.dataset.minimum_test}}</text>
+        <button class="details-toggle" data-day="{{item.day}}" bindtap="onToggle" aria-expanded="{{item.open}}">{{item.open ? '收起详情 −' : '版本差异与测试明细 +'}}</button>
+        <view wx:if="{{item.open}}" class="details">
+          <text class="label">模型：上一版本 → 候选版本</text><text selectable class="detail-text">{{item.oldModels || '--'}} → {{item.newModels || '--'}}</text>
+          <text class="label">上一版本工具</text><text selectable class="detail-text">{{item.oldTools || '--'}}</text>
+          <text class="label">候选版本工具</text><text selectable class="detail-text">{{item.newTools || '--'}}</text>
+          <text class="label">上一版本 Prompt</text><text selectable class="detail-text">{{item.previous_strategy.prompt || '--'}}</text>
+          <text class="label">候选版本 Prompt</text><text selectable class="detail-text">{{item.strategy.prompt || '--'}}</text>
+          <view wx:for="{{item.checks}}" wx:for-item="check" wx:key="key" class="check"><text>{{check.label}}</text><text class="{{check.passed ? 'passed' : 'not-passed'}}">{{check.passed ? '通过' : '未通过'}}</text></view>
+          <block wx:if="{{item.dataset.manifest_hash}}"><text class="label">测试集 SHA-256</text><text selectable class="detail-text mono">{{item.dataset.manifest_hash}}</text></block>
+          <block wx:if="{{item.sampleResults.length}}">
+            <text class="label">逐日绝对误差 / USD</text>
+            <view class="comparison-row column-head"><text>日期 / 轮次</text><text>上一版本</text><text>候选版本</text></view>
+            <view class="comparison-row" wx:for="{{item.sampleResults}}" wx:for-item="sample" wx:key="key"><text>{{sample.day}} / {{sample.repeat}}</text><text>{{sample.current}}</text><text>{{sample.candidate}}</text></view>
+          </block>
+          <text class="label">执行版本</text><text selectable class="detail-text mono">{{item.execution_signature}}</text>
+          <text wx:if="{{item.commit}}" class="label">Git Commit</text><text wx:if="{{item.commit}}" selectable class="detail-text mono">{{item.commit}}</text>
+          <text class="muted">{{item.completedLabel}}（北京时间）</text>
+        </view>
+      </view>
+      <view wx:if="{{back || next}}" class="pagination"><button bindtap="onBack" disabled="{{loading || !back}}">较新记录</button><button bindtap="onNext" disabled="{{loading || !next}}">更早记录</button></view>
+      <text class="footer">研究记录，不构成投资建议。回测改善不保证未来表现。</text>
+      <text class="footer">更新于 {{updated}}（北京时间）</text>
+    </block>
+  </block>
+</view>
