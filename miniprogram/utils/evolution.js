@@ -2,7 +2,8 @@ const { formatTime, validDate } = require('./model');
 
 const STATUSES = {
   waiting_data: '等待样本', running: '评估中', promoted: '已晋级',
-  rejected: '未晋级', unchanged: '无变更', failed: '任务失败', diagnostic: '仅开发回测'
+  rejected: '未晋级', unchanged: '无变更', failed: '任务失败', diagnostic: '仅开发回测',
+  retry_wait: '等待重试'
 };
 const CHECKS = {
   direction_first_improved: '方向优先，持平时 MAE 更低',
@@ -34,6 +35,7 @@ function display(response) {
     const strategy = item.strategy || {};
     return Object.assign({}, item, {
       statusLabel: STATUSES[item.status], completedLabel: formatTime(item.completed_at || item.started_at),
+      nextRetryLabel: item.next_retry_at ? formatTime(item.next_retry_at) : '',
       comparisons, open: false,
       oldModels: [previous.quick_model, previous.deep_model].filter(Boolean).join(' / '),
       newModels: [strategy.quick_model, strategy.deep_model].filter(Boolean).join(' / '),

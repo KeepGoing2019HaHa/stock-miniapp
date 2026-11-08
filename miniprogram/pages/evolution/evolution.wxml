@@ -20,6 +20,8 @@
           <view class="comparison-row" wx:for="{{item.comparisons}}" wx:for-item="metric" wx:key="label"><text>{{metric.label}}</text><text>{{metric.current}}</text><text>{{metric.candidate}}</text></view>
         </view>
         <text wx:if="{{item.gate_reason}}" class="gate" selectable>{{item.gate_reason}}</text>
+        <text wx:if="{{item.expected_analyses}}" class="muted">已完成分析 {{item.completed_analyses}} / {{item.expected_analyses}}</text>
+        <text wx:if="{{item.nextRetryLabel}}" class="muted">下次重试不早于 {{item.nextRetryLabel}}（北京时间）</text>
         <text wx:if="{{item.dataset}}" class="muted">已结算 {{item.dataset.total}} · 未使用 {{item.dataset.fresh}} · 最少开发 {{item.dataset.minimum_train}} / 测试 {{item.dataset.minimum_test}}</text>
         <button class="details-toggle" data-day="{{item.day}}" bindtap="onToggle" aria-expanded="{{item.open}}">{{item.open ? '收起详情 −' : '版本差异与测试明细 +'}}</button>
         <view wx:if="{{item.open}}" class="details">

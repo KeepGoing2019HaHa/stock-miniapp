@@ -787,6 +787,18 @@ test('Evolution shows only the gate rules actually used by new and historical ru
   assert.ok(historical.checks.every((check) => !check.passed));
 });
 
+test('Evolution retry state displays preserved progress and cooldown', () => {
+  const { display } = require('../utils/evolution');
+  const payload = evolutionPayload();
+  Object.assign(payload.history.items[0], { status: 'retry_wait', completed_analyses: 14,
+    expected_analyses: 20, next_retry_at: '2026-11-08T04:00:00Z' });
+  const result = display(payload).items[0];
+  assert.equal(result.statusLabel, '等待重试');
+  assert.equal(result.completed_analyses, 14);
+  assert.equal(result.expected_analyses, 20);
+  assert.equal(result.nextRetryLabel, '2026-11-08 12:00');
+});
+
 test('Evolution pagination preserves data and cursor when a request fails', async () => {
   const platform = fakeWx(savedSession());
   const page = mount(createClient(platform, config), platform, evolutionDefinition);
