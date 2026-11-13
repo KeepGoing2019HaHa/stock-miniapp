@@ -799,6 +799,28 @@ test('Evolution retry state displays preserved progress and cooldown', () => {
   assert.equal(result.nextRetryLabel, '2026-11-08 12:00');
 });
 
+test('Evolution displays five full-history candidates and the selected winner', () => {
+  const { display } = require('../utils/evolution');
+  const payload = evolutionPayload();
+  const record = payload.history.items[0];
+  record.policy = 'all-history-five-v1';
+  record.dataset = { mode: 'all_history', total: 22, repeats: 1 };
+  record.best_candidate = 3;
+  record.candidates = Array.from({ length: 5 }, (_, index) => ({
+    number: index + 1, status: 'better', strategy: record.strategy,
+    summary: 'Candidate ' + (index + 1), rationale: '<literal>', backtest: record.backtest,
+    completed_analyses: 22, expected_analyses: 22
+  }));
+  const item = display(payload).items[0];
+  assert.equal(item.candidates.length, 5);
+  assert.equal(item.candidates[2].best, true);
+  assert.equal(item.candidates.filter((candidate) => candidate.best).length, 1);
+  assert.equal(item.candidates[0].comparisons[0].label, '方向准确率');
+  assert.equal(item.candidates[0].rationale, '<literal>');
+  record.status = 'superseded';
+  assert.equal(display(payload).items[0].statusLabel, '旧规则已停用');
+});
+
 test('Evolution pagination preserves data and cursor when a request fails', async () => {
   const platform = fakeWx(savedSession());
   const page = mount(createClient(platform, config), platform, evolutionDefinition);
