@@ -39,7 +39,8 @@ function display(response) {
     const previous = item.previous_strategy || {};
     const strategy = item.strategy || {};
     return Object.assign({}, item, {
-      statusLabel: STATUSES[item.status], completedLabel: formatTime(item.completed_at || item.started_at),
+      statusLabel: STATUSES[item.status], completedLabel: item.completed_at ? formatTime(item.completed_at) : '',
+      startedLabel: formatTime(item.started_at),
       nextRetryLabel: item.next_retry_at ? formatTime(item.next_retry_at) : '',
       comparisons, open: false,
       oldModels: [previous.quick_model, previous.deep_model].filter(Boolean).join(' / '),

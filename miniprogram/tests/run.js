@@ -799,6 +799,23 @@ test('Evolution retry state displays preserved progress and cooldown', () => {
   assert.equal(result.nextRetryLabel, '2026-11-08 12:00');
 });
 
+test('Evolution shows one daily candidate and separates run time from promotion time', () => {
+  const { display } = require('../utils/evolution');
+  const payload = evolutionPayload();
+  payload.summary.candidate_count = 1;
+  Object.assign(payload.history.items[0], {
+    candidate_count: 1, started_at: '2026-11-14T02:15:00Z', completed_at: '2026-11-16T15:15:00Z',
+    prediction_policy: 'immutable-first-success-v1', cached_analyses: 22,
+    parent_version: 'baseline-version', candidate_version: 'new-version'
+  });
+  const result = display(payload);
+  assert.equal(result.summary.candidate_count, 1);
+  assert.equal(result.items[0].startedLabel, '2026-11-14 10:15');
+  assert.equal(result.items[0].completedLabel, '2026-11-16 23:15');
+  assert.equal(result.items[0].cached_analyses, 22);
+  assert.equal(result.items[0].parent_version, 'baseline-version');
+});
+
 test('Evolution displays five full-history candidates and the selected winner', () => {
   const { display } = require('../utils/evolution');
   const payload = evolutionPayload();
